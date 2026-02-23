@@ -1,0 +1,3 @@
+*.csv
+method_qapp_venv/
+*.xlsx
