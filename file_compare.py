@@ -178,7 +178,7 @@ def analyze_file_pair(prev_file, curr_file, prev_folder, curr_folder):
         "df_prev": df_prev
     }
 
-def generate_report(file_pairs, prev_folder, curr_folder, output_folder):
+def generate_report(file_pairs, prev_folder, curr_folder, output_folder, ISSUES_FOLDER):
     os.makedirs(output_folder, exist_ok=True)
     rows = []
     for prev_file, curr_file in file_pairs:
@@ -220,7 +220,7 @@ def generate_issue_files(file_pairs, prev_folder, curr_folder, issues_folder):
                             if pd.notnull(prev_val) and (pd.isnull(curr_val) or curr_val == ""):
                                 flagged = curr_row.copy()
                                 flagged["Issue"] = f"{col} missing for SKU {sku}"
-                                issue_rows.append(pd.DataFrame([flagged]))
+                                issue_rows.append(pd.DataFrame(flagged))
             if issue_rows:
                 all_issues_df = pd.concat(issue_rows).drop_duplicates()
                 issue_file_name = f"{os.path.splitext(curr_file)[0]}_issue_{today_str}.csv"
