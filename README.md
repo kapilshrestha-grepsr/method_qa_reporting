@@ -61,9 +61,6 @@ method_qa_reporting/
 - **Issue Detection:**  
   Update logic in `analyze_file_pair` in `file_compare.py` to add or change issue types.
 
-## License
-
-MIT License
 
 ---
 
