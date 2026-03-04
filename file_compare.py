@@ -5,15 +5,29 @@ from pandas.errors import EmptyDataError
 from datetime import datetime
 
 def normalize_filename(filename: str) -> str:
+    """
+    Extract a robust identifier from the filename:
+    - Remove extensions like .csv
+    - Remove numeric prefixes, timestamps, and dates
+    - Ignore common words like methodusa, shop, com, merged, procurement, llc
+    - Extract the most meaningful part of the filename (e.g., domain or brand name)
+    """
     ignore_words = {"methodusa", "shop", "com", "merged", "procurement", "llc"}
     name = filename.lower()
-    name = re.sub(r'\.csv$', '', name)
-    name = re.sub(r'^[\d_\-]+', '', name)
-    parts = re.split(r'[_\-\s]+', name)
-    for part in parts:
-        if re.search(r'[a-z]', part) and part not in ignore_words:
-            return part
-    return ""
+    name = re.sub(r'\.csv$', '', name)  # Remove extension
+    name = re.sub(r'^[\d_\-]+', '', name)  # Remove leading numbers, underscores, or dashes
+    parts = re.split(r'[_\-\s]+', name)  # Split by underscores, dashes, or spaces
+
+    # Filter out ignored words and non-meaningful parts
+    meaningful_parts = [part for part in parts if part not in ignore_words and re.search(r'[a-z]', part)]
+
+    # If the filename contains a domain-like structure, extract the domain
+    for part in meaningful_parts:
+        if "_com" in part or "_net" in part or "_org" in part:
+            return part.split("_")[0]  # Extract the domain name (e.g., scottsdental from scottsdental_com)
+
+    # Join remaining meaningful parts for better matching
+    return "_".join(meaningful_parts)
 
 def map_files(prev_folder, curr_folder):
     prev_files = [f for f in os.listdir(prev_folder) if f.endswith(".csv")]
