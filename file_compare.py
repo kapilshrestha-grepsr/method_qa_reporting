@@ -208,36 +208,47 @@ def generate_issue_files(file_pairs, prev_folder, curr_folder, issues_folder):
     os.makedirs(issues_folder, exist_ok=True)
     today_str = datetime.today().strftime("%Y-%m-%d")
     for prev_file, curr_file in file_pairs:
-        result = analyze_file_pair(prev_file, curr_file, prev_folder, curr_folder)
-        row = result["row"]
-        df_curr = result["df_curr"]
-        df_prev = result["df_prev"]
-        if row["Should_Open_Ticket"] == "Yes" and df_curr is not None and df_prev is not None:
-            issue_rows = []
-            # Standard issues
-            for mask, label in result["issues"]:
-                rows = df_curr[mask].copy()
-                if not rows.empty:
-                    rows["Issue"] = label
-                    issue_rows.append(rows)
-            # Detailed QA: Compare key columns for each SKU
-            if "SKU" in df_prev.columns and "SKU" in df_curr.columns:
-                df_curr_sku_map = df_curr.set_index("SKU")
-                key_columns = [col for col in df_prev.columns if re.search(r'product[\s_]*page[\s_]*url|image[\s_]*url', col, re.I)]
-                for idx, prev_row in df_prev.iterrows():
-                    sku = prev_row["SKU"]
-                    if sku in df_curr_sku_map.index:
-                        curr_row = df_curr_sku_map.loc[sku]
-                        for col in key_columns:
-                            prev_val = prev_row.get(col, "")
-                            curr_val = curr_row.get(col, "")
-                            if pd.notnull(prev_val) and (pd.isnull(curr_val) or curr_val == ""):
-                                flagged = curr_row.copy()
-                                flagged["Issue"] = f"{col} missing for SKU {sku}"
-                                issue_rows.append(pd.DataFrame(flagged))
-            if issue_rows:
-                all_issues_df = pd.concat(issue_rows).drop_duplicates()
-                issue_file_name = f"{os.path.splitext(curr_file)[0]}_issue_{today_str}.csv"
-                issue_file_path = os.path.join(issues_folder, issue_file_name)
-                all_issues_df.to_csv(issue_file_path, index=False)
-                print(f"Issue file generated: {issue_file_path}")
+        try:
+            # Process each file pair
+            result = analyze_file_pair(prev_file, curr_file, prev_folder, curr_folder)
+            row = result["row"]
+            df_curr = result["df_curr"]
+            df_prev = result["df_prev"]
+
+            if row["Should_Open_Ticket"] == "Yes" and df_curr is not None and df_prev is not None:
+                issue_rows = []
+
+                # Standard issues
+                for mask, label in result["issues"]:
+                    if mask.any():  # Explicitly check if the mask has any True values
+                        rows = df_curr[mask].copy()
+                        rows["Issue"] = label
+                        issue_rows.append(rows)
+
+                # Detailed QA: Compare key columns for each SKU
+                if "SKU" in df_prev.columns and "SKU" in df_curr.columns:
+                    df_curr_sku_map = df_curr.set_index("SKU")
+                    key_columns = [col for col in df_prev.columns if re.search(r'product[\s_]*page[\s_]*url|image[\s_]*url', col, re.I)]
+                    for idx, prev_row in df_prev.iterrows():
+                        sku = prev_row["SKU"]
+                        if sku in df_curr_sku_map.index:
+                            curr_row = df_curr_sku_map.loc[sku]
+                            for col in key_columns:
+                                prev_val = prev_row.get(col, "")
+                                curr_val = curr_row.get(col, "")
+                                if pd.notnull(prev_val) and (pd.isnull(curr_val) or curr_val == ""):
+                                    flagged = curr_row.copy()
+                                    flagged["Issue"] = f"{col} missing for SKU {sku}"
+                                    issue_rows.append(pd.DataFrame([flagged]))  # Wrap in a list before creating a DataFrame
+
+                # Save issue file if there are any issues
+                if issue_rows:
+                    all_issues_df = pd.concat(issue_rows, ignore_index=True).drop_duplicates()
+                    issue_file_name = f"{os.path.splitext(curr_file)[0]}_issue_{today_str}.csv"
+                    issue_file_path = os.path.join(issues_folder, issue_file_name)
+                    all_issues_df.to_csv(issue_file_path, index=False)
+                    print(f"Issue file generated: {issue_file_path}")
+
+        except Exception as e:
+            # Log the error and continue with the next file pair
+            print(f"Error processing file pair ({prev_file}, {curr_file}): {e}")

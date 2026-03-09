@@ -1,4 +1,4 @@
-from file_compare import map_files, generate_report
+from file_compare import map_files, generate_report, generate_issue_files
 from downloader import download_section
 
 BASE_PATH = "/home/kapil/project/method_qa_reporting/methodusa_parent"
@@ -19,6 +19,10 @@ def main():
     print("\n--- Generating Report ---")
     report_path = generate_report(file_pairs, PREV_FOLDER, CURR_FOLDER, OUTPUT_FOLDER, ISSUES_FOLDER)
     print(f"Report generated: {report_path}")
+
+    print("\n--- Generating Issue Files ---")
+    generate_issue_files(file_pairs, PREV_FOLDER, CURR_FOLDER, ISSUES_FOLDER)
+    print(f"Issue files generated in folder: {ISSUES_FOLDER}")
 
 if __name__ == "__main__":
     main()
